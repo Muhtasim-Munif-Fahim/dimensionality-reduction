@@ -17,7 +17,9 @@ def pca_manual(
     projected = X_centered @ components
 
     explained = eigenvalues[idx] / eigenvalues.sum()
-    return pd.DataFrame(projected, columns=[f"PC{i+1}" for i in range(n_components)]), {
+    result = projected.copy() if isinstance(projected, pd.DataFrame) else pd.DataFrame(projected)
+    result.columns = [f"PC{i+1}" for i in range(n_components)]
+    return result, {
         "explained_variance_ratio": explained.tolist(),
         "cumulative_variance": float(explained.sum()),
     }
