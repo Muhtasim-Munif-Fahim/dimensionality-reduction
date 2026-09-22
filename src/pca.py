@@ -1,4 +1,9 @@
-"""PCA implementations: manual (numpy eigendecomposition) and SVD-based."""
+"""PCA implementations: manual (numpy eigendecomposition) and SVD-based.
+
+Both helpers center the columns before factoring. Sparse TF-IDF-style inputs
+should use ``truncated_svd.TruncatedSVD`` instead: it does not center, so
+structural zeros stay zero.
+"""
 
 from __future__ import annotations
 
