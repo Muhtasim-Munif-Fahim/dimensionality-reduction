@@ -1,4 +1,8 @@
-"""Reduction method comparison summaries."""
+"""Reduction method comparison summaries.
+
+``format_results_table`` and ``best_method`` read whatever the pipeline
+recorded. That includes ``nmf`` alongside PCA, LDA, t-SNE, and the autoencoder.
+"""
 
 from __future__ import annotations
 
