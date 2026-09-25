@@ -16,6 +16,7 @@ tests/              - Unit tests
 - SVD-based reduction
 - Truncated SVD for sparse TF-IDF matrices (no centering)
 - FastICA for linear mixtures of independent sources
+- NMF (non-negative parts-based factors, multiplicative updates)
 - LDA (supervised)
 - t-SNE (visualization)
 - Autoencoder (numpy from scratch)
@@ -84,6 +85,38 @@ print(ica.n_iter_, round(float(np.mean((observed - restored) ** 2)), 6))
 ```
 
 `components_` is the unmixing matrix, shape `(n_components, n_features)`. `mixing_` maps sources back to the centered features. `inverse_transform` adds the training mean.
+
+## NMF
+
+`NMF` in `src/nmf.py` factors a non-negative matrix as `X ≈ W @ H` with Lee–Seung multiplicative updates. `W` is the sample embedding and `H` (`components_`) is the basis. Both stay non-negative, so the parts can be read as topics, spectra, or additive features. PCA and FastICA are free to use negative loadings; this one is not.
+
+The implementation is NumPy only. `nmf_reduce` follows `pca_manual`: it returns the embedding and an info dict. A DataFrame comes back as a DataFrame with columns `NMF1`, `NMF2`, ...; an array comes back as an array. `components`, `reconstruction_error` (mean squared residual), and `n_iter` live in the info dict. The class also exposes `fit`, `transform`, `fit_transform`, and `inverse_transform`.
+
+`n_components` is an integer rank, at most `min(n_samples, n_features)`. The default start is non-negative double SVD (`init="nndsvda"`). `init="random"` uses `random_state`. Negative, NaN, or infinite entries are rejected. The comparison pipeline shifts each synthetic column so its minimum is zero before calling `nmf_reduce`, because those features are signed.
+
+Run the example from the repository root with `src` on `PYTHONPATH`.
+
+```python
+import numpy as np
+from nmf import NMF, nmf_reduce
+
+rng = np.random.default_rng(0)
+topics = rng.random((4, 12))
+weights = rng.dirichlet(np.ones(4), size=50)
+documents = weights @ topics
+
+embedding, info = nmf_reduce(documents, n_components=4, random_state=0)
+model = NMF(n_components=4, random_state=0)
+codes = model.fit_transform(documents)
+restored = model.inverse_transform(codes)
+
+print(embedding.shape)  # (50, 4)
+print(info["components"].shape)  # (4, 12)
+print(float(embedding.min()), round(info["reconstruction_error"], 6))
+print(restored.shape)  # (50, 12)
+```
+
+`codes @ model.components_` is the reconstruction. There is no mean to add.
 
 ## Evaluation
 
