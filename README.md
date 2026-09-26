@@ -18,7 +18,8 @@ tests/              - Unit tests
 - FastICA for linear mixtures of independent sources
 - NMF (non-negative parts-based factors, multiplicative updates)
 - LDA (supervised)
-- t-SNE (visualization)
+- t-SNE (visualization; sklearn wrapper)
+- Classic t-SNE (exact NumPy, perplexity / learning-rate)
 - Autoencoder (numpy from scratch)
 
 ## Pivot: TruncatedSVD instead of another PCA
@@ -124,3 +125,22 @@ print(restored.shape)  # (50, 12)
 - Reconstruction error
 - Silhouette score on reduced embeddings
 - Visual separation quality
+
+
+## Classic t-SNE (NumPy)
+
+The sklearn wrapper in `supervised_methods.tsne_reduce` is convenient for
+quick plots. `src/tsne.py` adds the classic exact algorithm matching the
+style of `FastICA` / `NMF` / `TruncatedSVD`: a `TSNE` class with
+`fit` / `fit_transform`, binary-search perplexity affinities, early
+exaggeration, and adaptive gains. No sklearn dependency.
+
+```python
+import numpy as np
+from tsne import TSNE, tsne_reduce
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(120, 8))
+embedding = TSNE(n_components=2, perplexity=20.0, learning_rate=200.0, n_iter=500, random_state=0).fit_transform(X)
+print(embedding.shape)  # (120, 2)
+```
