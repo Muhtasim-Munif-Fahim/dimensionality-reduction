@@ -12,6 +12,7 @@ from pca import pca_manual, pca_svd, variance_retained
 from nmf import nmf_reduce
 from supervised_methods import lda_reduce, tsne_reduce
 from tsne import TSNE
+from isomap import Isomap
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 
@@ -68,6 +69,18 @@ def run_pipeline(
     results["tsne_classic"] = {
         "silhouette": round(silhouette_of_embedding(classic_emb, labels), 4),
         "separation": round(cluster_separation(classic_emb, labels), 4),
+        "variance": float("nan"),
+    }
+
+
+    isomap_emb = Isomap(
+        n_components=2,
+        n_neighbors=min(10, max(3, n_samples // 20)),
+    ).fit_transform(df.to_numpy())
+    isomap_frame = pd.DataFrame(isomap_emb, columns=["ISO1", "ISO2"])
+    results["isomap"] = {
+        "silhouette": round(silhouette_of_embedding(isomap_frame, labels), 4),
+        "separation": round(cluster_separation(isomap_frame, labels), 4),
         "variance": float("nan"),
     }
 

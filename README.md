@@ -20,6 +20,7 @@ tests/              - Unit tests
 - LDA (supervised)
 - t-SNE (visualization; sklearn wrapper)
 - Classic t-SNE (exact NumPy, perplexity / learning-rate)
+- Isomap (geodesic kNN graph + classical MDS)
 - Autoencoder (numpy from scratch)
 
 ## Pivot: TruncatedSVD instead of another PCA
@@ -144,3 +145,25 @@ X = rng.normal(size=(120, 8))
 embedding = TSNE(n_components=2, perplexity=20.0, learning_rate=200.0, n_iter=500, random_state=0).fit_transform(X)
 print(embedding.shape)  # (120, 2)
 ```
+
+## Isomap
+
+`Isomap` in `src/isomap.py` builds a k-nearest-neighbour graph, approximates
+geodesic distances with Floyd–Warshall, and embeds them with classical MDS
+(Tenenbaum, de Silva & Langford, 2000). Use it when the data lie on a
+nonlinear manifold that is locally Euclidean.
+
+```python
+import numpy as np
+from isomap import Isomap, isomap_reduce
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(120, 8))
+emb = Isomap(n_components=2, n_neighbors=10).fit_transform(X)
+print(emb.shape)  # (120, 2)
+```
+
+`n_neighbors` controls the neighbourhood graph. If the raw kNN graph is
+disconnected, shortest inter-component edges are bridged automatically.
+`isomap_reduce` returns a pandas DataFrame with columns `ISO1`, `ISO2`, …
+
