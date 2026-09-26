@@ -11,6 +11,7 @@ from data_generation import generate_high_dim_data
 from pca import pca_manual, pca_svd, variance_retained
 from nmf import nmf_reduce
 from supervised_methods import lda_reduce, tsne_reduce
+from tsne import TSNE
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 
@@ -52,6 +53,21 @@ def run_pipeline(
     results["tsne"] = {
         "silhouette": round(silhouette_of_embedding(tsne_emb, labels), 4),
         "separation": round(cluster_separation(tsne_emb, labels), 4),
+        "variance": float("nan"),
+    }
+
+    # Classic NumPy t-SNE (exact algorithm). Keep perplexity small for the
+    # demo sample size and cap iterations so the pipeline stays interactive.
+    classic = TSNE(
+        n_components=2,
+        perplexity=min(30.0, max(5.0, n_samples / 4.0)),
+        n_iter=300,
+        random_state=0,
+    ).fit_transform(df.to_numpy())
+    classic_emb = pd.DataFrame(classic, columns=["TSNE1", "TSNE2"])
+    results["tsne_classic"] = {
+        "silhouette": round(silhouette_of_embedding(classic_emb, labels), 4),
+        "separation": round(cluster_separation(classic_emb, labels), 4),
         "variance": float("nan"),
     }
 
