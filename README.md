@@ -21,6 +21,7 @@ tests/              - Unit tests
 - t-SNE (visualization; sklearn wrapper)
 - Classic t-SNE (exact NumPy, perplexity / learning-rate)
 - Isomap (geodesic kNN graph + classical MDS)
+- LLE (Locally Linear Embedding; neighbourhood reconstruction)
 - Autoencoder (numpy from scratch)
 
 ## Pivot: TruncatedSVD instead of another PCA
@@ -166,4 +167,24 @@ print(emb.shape)  # (120, 2)
 `n_neighbors` controls the neighbourhood graph. If the raw kNN graph is
 disconnected, shortest inter-component edges are bridged automatically.
 `isomap_reduce` returns a pandas DataFrame with columns `ISO1`, `ISO2`, …
+
+## LLE (Locally Linear Embedding)
+
+`LLE` in `src/lle.py` reconstructs each point as a linear combination of its
+k nearest neighbours, then finds a low-dimensional embedding that preserves
+those reconstruction weights (Roweis & Saul, 2000). Use it when the data lie
+on a nonlinear manifold that is locally linear.
+
+```python
+import numpy as np
+from lle import LLE, lle_reduce
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(120, 8))
+emb = LLE(n_components=2, n_neighbors=10).fit_transform(X)
+print(emb.shape)  # (120, 2)
+```
+
+`n_neighbors` controls the local patches. `lle_reduce` returns a pandas
+DataFrame with columns `LLE1`, `LLE2`, …
 
