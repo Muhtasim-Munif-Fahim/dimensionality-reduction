@@ -13,6 +13,7 @@ from nmf import nmf_reduce
 from supervised_methods import lda_reduce, tsne_reduce
 from tsne import TSNE
 from isomap import Isomap
+from lle import LLE
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 
@@ -81,6 +82,17 @@ def run_pipeline(
     results["isomap"] = {
         "silhouette": round(silhouette_of_embedding(isomap_frame, labels), 4),
         "separation": round(cluster_separation(isomap_frame, labels), 4),
+        "variance": float("nan"),
+    }
+
+    lle_emb = LLE(
+        n_components=2,
+        n_neighbors=min(10, max(3, n_samples // 20)),
+    ).fit_transform(df.to_numpy())
+    lle_frame = pd.DataFrame(lle_emb, columns=["LLE1", "LLE2"])
+    results["lle"] = {
+        "silhouette": round(silhouette_of_embedding(lle_frame, labels), 4),
+        "separation": round(cluster_separation(lle_frame, labels), 4),
         "variance": float("nan"),
     }
 
