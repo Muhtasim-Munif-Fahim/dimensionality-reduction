@@ -22,6 +22,7 @@ tests/              - Unit tests
 - Classic t-SNE (exact NumPy, perplexity / learning-rate)
 - Isomap (geodesic kNN graph + classical MDS)
 - LLE (Locally Linear Embedding; neighbourhood reconstruction)
+- Classical MDS (metric multidimensional scaling from pairwise distances)
 - Autoencoder (numpy from scratch)
 
 ## Pivot: TruncatedSVD instead of another PCA
@@ -187,4 +188,23 @@ print(emb.shape)  # (120, 2)
 
 `n_neighbors` controls the local patches. `lle_reduce` returns a pandas
 DataFrame with columns `LLE1`, `LLE2`, …
+
+## Classical MDS
+
+`ClassicalMDS` in `src/mds.py` embeds points from pairwise Euclidean
+distances via double-centering and the leading eigenvectors of the
+resulting Gram matrix (Torgerson scaling). Pass `metric="precomputed"` to
+supply a square distance matrix directly.
+
+```python
+import numpy as np
+from mds import ClassicalMDS, mds_reduce
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(80, 6))
+emb = ClassicalMDS(n_components=2).fit_transform(X)
+print(emb.shape)  # (80, 2)
+```
+
+`mds_reduce` returns a pandas DataFrame with columns `MDS1`, `MDS2`, …
 

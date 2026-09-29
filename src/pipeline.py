@@ -14,6 +14,7 @@ from supervised_methods import lda_reduce, tsne_reduce
 from tsne import TSNE
 from isomap import Isomap
 from lle import LLE
+from mds import ClassicalMDS
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 
@@ -93,6 +94,14 @@ def run_pipeline(
     results["lle"] = {
         "silhouette": round(silhouette_of_embedding(lle_frame, labels), 4),
         "separation": round(cluster_separation(lle_frame, labels), 4),
+        "variance": float("nan"),
+    }
+
+    mds_emb = ClassicalMDS(n_components=2).fit_transform(df.to_numpy())
+    mds_frame = pd.DataFrame(mds_emb, columns=["MDS1", "MDS2"])
+    results["classical_mds"] = {
+        "silhouette": round(silhouette_of_embedding(mds_frame, labels), 4),
+        "separation": round(cluster_separation(mds_frame, labels), 4),
         "variance": float("nan"),
     }
 
