@@ -23,6 +23,7 @@ tests/              - Unit tests
 - Isomap (geodesic kNN graph + classical MDS)
 - LLE (Locally Linear Embedding; neighbourhood reconstruction)
 - Classical MDS (metric multidimensional scaling from pairwise distances)
+- Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
 
 ## Pivot: TruncatedSVD instead of another PCA
@@ -208,3 +209,21 @@ print(emb.shape)  # (80, 2)
 
 `mds_reduce` returns a pandas DataFrame with columns `MDS1`, `MDS2`, …
 
+## Kernel PCA
+
+`KernelPCA` in `src/kernel_pca.py` embeds points via a centred Gram matrix
+and its leading eigenvectors (Schölkopf, Smola & Müller, 1998). Supported
+kernels are `rbf`, `linear`, and `poly`. `transform` provides the
+Nyström-style out-of-sample extension.
+
+```python
+import numpy as np
+from kernel_pca import KernelPCA, kernel_pca_reduce
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(80, 6))
+emb = KernelPCA(n_components=2, kernel="rbf").fit_transform(X)
+print(emb.shape)  # (80, 2)
+```
+
+`kernel_pca_reduce` returns a pandas DataFrame with columns `KPCA1`, `KPCA2`, …

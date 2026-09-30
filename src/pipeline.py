@@ -15,6 +15,7 @@ from tsne import TSNE
 from isomap import Isomap
 from lle import LLE
 from mds import ClassicalMDS
+from kernel_pca import KernelPCA
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 
