@@ -22,6 +22,7 @@ tests/              - Unit tests
 - Classic t-SNE (exact NumPy, perplexity / learning-rate)
 - Isomap (geodesic kNN graph + classical MDS)
 - LLE (Locally Linear Embedding; neighbourhood reconstruction)
+- Spectral Embedding / Laplacian Eigenmaps (kNN Laplacian eigenvectors)
 - Classical MDS (metric multidimensional scaling from pairwise distances)
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
@@ -55,6 +56,33 @@ print(restored.shape)  # (80, 30)
 ```
 
 An integer rank works the same way: `TruncatedSVD(n_components=10)`. The embedding is dense. `inverse_transform` does not add a mean, because the decomposition never subtracted one.
+
+
+## Spectral Embedding / Laplacian Eigenmaps
+
+`SpectralEmbedding` in `src/spectral_embedding.py` builds a symmetric k-nearest-neighbour
+affinity graph, forms the symmetric normalised Laplacian
+``L = I - D^{-1/2} W D^{-1/2}``, and embeds each point with the smallest
+non-trivial eigenvectors (Belkin & Niyogi Laplacian Eigenmaps). Use it when
+local neighbourhood connectivity matters more than global geodesic distances
+(Isomap) or reconstruction weights (LLE).
+
+`n_neighbors` controls the graph; `affinity` is ``"nearest_neighbors"`` (binary)
+or ``"rbf"`` (Gaussian heat kernel on the same edges). Classic Laplacian
+Eigenmaps is transductive: there is no out-of-sample ``transform``.
+
+```python
+import numpy as np
+from spectral_embedding import SpectralEmbedding, spectral_reduce
+
+rng = np.random.default_rng(0)
+X = np.vstack([
+    rng.normal(loc=-2.0, size=(50, 8)),
+    rng.normal(loc=2.0, size=(50, 8)),
+])
+emb = SpectralEmbedding(n_components=2, n_neighbors=10).fit_transform(X)
+print(emb.shape)  # (100, 2)
+```
 
 ## FastICA
 

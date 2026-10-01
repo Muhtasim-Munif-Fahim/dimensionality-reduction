@@ -16,6 +16,7 @@ from isomap import Isomap
 from lle import LLE
 from mds import ClassicalMDS
 from kernel_pca import KernelPCA
+from spectral_embedding import SpectralEmbedding
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 
@@ -95,6 +96,17 @@ def run_pipeline(
     results["lle"] = {
         "silhouette": round(silhouette_of_embedding(lle_frame, labels), 4),
         "separation": round(cluster_separation(lle_frame, labels), 4),
+        "variance": float("nan"),
+    }
+
+    se_emb = SpectralEmbedding(
+        n_components=2,
+        n_neighbors=min(10, max(3, n_samples // 20)),
+    ).fit_transform(df.to_numpy())
+    se_frame = pd.DataFrame(se_emb, columns=["SE1", "SE2"])
+    results["spectral_embedding"] = {
+        "silhouette": round(silhouette_of_embedding(se_frame, labels), 4),
+        "separation": round(cluster_separation(se_frame, labels), 4),
         "variance": float("nan"),
     }
 
