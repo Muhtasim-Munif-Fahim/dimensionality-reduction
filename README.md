@@ -23,6 +23,7 @@ tests/              - Unit tests
 - Isomap (geodesic kNN graph + classical MDS)
 - LLE (Locally Linear Embedding; neighbourhood reconstruction)
 - Spectral Embedding / Laplacian Eigenmaps (kNN Laplacian eigenvectors)
+- Factor Analysis (EM / MLE latent factors with diagonal uniquenesses)
 - Classical MDS (metric multidimensional scaling from pairwise distances)
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
@@ -83,6 +84,26 @@ X = np.vstack([
 emb = SpectralEmbedding(n_components=2, n_neighbors=10).fit_transform(X)
 print(emb.shape)  # (100, 2)
 ```
+
+
+## Factor Analysis
+
+`FactorAnalysis` in `src/factor_analysis.py` models each row as a linear mix of
+a few latent factors plus independent per-feature noise (uniquenesses). PCA
+rotates the leading covariance eigenvectors; FA instead estimates loadings
+`components_` and a diagonal `noise_variance_` with EM (Rubin & Thayer style).
+`fit_transform` / `transform` return the posterior factor means.
+
+```python
+from factor_analysis import FactorAnalysis, factor_analysis_reduce
+import numpy as np
+
+X = np.random.default_rng(0).normal(size=(200, 8))
+emb = FactorAnalysis(n_components=2, max_iter=200).fit_transform(X)
+frame = factor_analysis_reduce(X, n_components=2)
+```
+
+`factor_analysis_reduce` returns a pandas DataFrame with columns `FA1`, `FA2`, …
 
 ## FastICA
 

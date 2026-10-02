@@ -17,6 +17,7 @@ from lle import LLE
 from mds import ClassicalMDS
 from kernel_pca import KernelPCA
 from spectral_embedding import SpectralEmbedding
+from factor_analysis import FactorAnalysis
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 
@@ -107,6 +108,19 @@ def run_pipeline(
     results["spectral_embedding"] = {
         "silhouette": round(silhouette_of_embedding(se_frame, labels), 4),
         "separation": round(cluster_separation(se_frame, labels), 4),
+        "variance": float("nan"),
+    }
+
+    fa_emb = FactorAnalysis(
+        n_components=2,
+        max_iter=200,
+        tol=1e-3,
+        random_state=0,
+    ).fit_transform(df.to_numpy())
+    fa_frame = pd.DataFrame(fa_emb, columns=["FA1", "FA2"])
+    results["factor_analysis"] = {
+        "silhouette": round(silhouette_of_embedding(fa_frame, labels), 4),
+        "separation": round(cluster_separation(fa_frame, labels), 4),
         "variance": float("nan"),
     }
 
