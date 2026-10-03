@@ -86,6 +86,34 @@ print(emb.shape)  # (100, 2)
 ```
 
 
+## Diffusion Maps
+
+`DiffusionMaps` in `src/diffusion_maps.py` builds a Gaussian affinity (kNN or
+dense RBF), optionally density-normalises it with Coifman–Lafon ``alpha``,
+forms the row-stochastic diffusion / Markov matrix, and embeds each point with
+``lambda^t * eigenvector`` coordinates (skipping the trivial first mode). Use it
+when a diffusion geometry / multi-scale random-walk view of the data matters.
+
+`n_neighbors` / ``epsilon`` control the affinity; ``t`` is diffusion time;
+``alpha`` is density normalisation (``0`` skips it). Classic Diffusion Maps is
+transductive: there is no out-of-sample ``transform``.
+
+```python
+import numpy as np
+from diffusion_maps import DiffusionMaps, diffusion_reduce
+
+rng = np.random.default_rng(0)
+X = np.vstack([
+    rng.normal(loc=-2.0, size=(50, 8)),
+    rng.normal(loc=2.0, size=(50, 8)),
+])
+emb = DiffusionMaps(n_components=2, n_neighbors=10, t=1.0).fit_transform(X)
+print(emb.shape)  # (100, 2)
+frame = diffusion_reduce(X, n_components=2)
+```
+
+`diffusion_reduce` returns a pandas DataFrame with columns `DM1`, `DM2`, …
+
 ## Factor Analysis
 
 `FactorAnalysis` in `src/factor_analysis.py` models each row as a linear mix of

@@ -18,6 +18,7 @@ from mds import ClassicalMDS
 from kernel_pca import KernelPCA
 from spectral_embedding import SpectralEmbedding
 from factor_analysis import FactorAnalysis
+from diffusion_maps import DiffusionMaps
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 
@@ -121,6 +122,19 @@ def run_pipeline(
     results["factor_analysis"] = {
         "silhouette": round(silhouette_of_embedding(fa_frame, labels), 4),
         "separation": round(cluster_separation(fa_frame, labels), 4),
+        "variance": float("nan"),
+    }
+
+    dm_emb = DiffusionMaps(
+        n_components=2,
+        n_neighbors=min(10, max(3, n_samples // 20)),
+        t=1.0,
+        alpha=0.0,
+    ).fit_transform(df.to_numpy())
+    dm_frame = pd.DataFrame(dm_emb, columns=["DM1", "DM2"])
+    results["diffusion_maps"] = {
+        "silhouette": round(silhouette_of_embedding(dm_frame, labels), 4),
+        "separation": round(cluster_separation(dm_frame, labels), 4),
         "variance": float("nan"),
     }
 
