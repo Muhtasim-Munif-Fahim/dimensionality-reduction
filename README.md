@@ -25,6 +25,7 @@ tests/              - Unit tests
 - Spectral Embedding / Laplacian Eigenmaps (kNN Laplacian eigenvectors)
 - Factor Analysis (EM / MLE latent factors with diagonal uniquenesses)
 - Classical MDS (metric multidimensional scaling from pairwise distances)
+- Sammon mapping (nonlinear metric MDS; fractional distance stress)
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
 
@@ -285,6 +286,35 @@ print(emb.shape)  # (80, 2)
 ```
 
 `mds_reduce` returns a pandas DataFrame with columns `MDS1`, `MDS2`, …
+
+
+## Sammon Mapping
+
+`Sammon` in `src/sammon.py` is Sammon's 1969 nonlinear mapping: it iteratively
+minimises a **fractional** stress that weights relative distance errors more
+heavily for nearby pairs than classical MDS does. Initialisation defaults to
+classical MDS; updates use Sammon's steepest-descent step with a magic factor
+(default `0.3`). Classic Sammon mapping is transductive — there is no
+out-of-sample `transform`.
+
+```python
+import numpy as np
+from sammon import Sammon, sammon_reduce
+
+rng = np.random.default_rng(0)
+X = np.vstack([
+    rng.normal(loc=-2.0, size=(40, 6)),
+    rng.normal(loc=2.0, size=(40, 6)),
+])
+emb = Sammon(n_components=2, max_iter=100).fit_transform(X)
+print(emb.shape)  # (80, 2)
+print(round(Sammon(n_components=2).fit(X).stress_, 6))
+
+frame = sammon_reduce(X, n_components=2)
+```
+
+`sammon_reduce` returns a pandas DataFrame with columns `SAM1`, `SAM2`, …
+
 
 ## Kernel PCA
 
