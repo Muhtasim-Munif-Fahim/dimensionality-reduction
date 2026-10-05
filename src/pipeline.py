@@ -15,6 +15,7 @@ from tsne import TSNE
 from isomap import Isomap
 from lle import LLE
 from mds import ClassicalMDS
+from sammon import Sammon
 from kernel_pca import KernelPCA
 from spectral_embedding import SpectralEmbedding
 from factor_analysis import FactorAnalysis
@@ -143,6 +144,14 @@ def run_pipeline(
     results["classical_mds"] = {
         "silhouette": round(silhouette_of_embedding(mds_frame, labels), 4),
         "separation": round(cluster_separation(mds_frame, labels), 4),
+        "variance": float("nan"),
+    }
+
+    sammon_emb = Sammon(n_components=2, max_iter=80, tol=1e-5).fit_transform(df.to_numpy())
+    sammon_frame = pd.DataFrame(sammon_emb, columns=["SAM1", "SAM2"])
+    results["sammon"] = {
+        "silhouette": round(silhouette_of_embedding(sammon_frame, labels), 4),
+        "separation": round(cluster_separation(sammon_frame, labels), 4),
         "variance": float("nan"),
     }
 
