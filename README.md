@@ -26,6 +26,7 @@ tests/              - Unit tests
 - Factor Analysis (EM / MLE latent factors with diagonal uniquenesses)
 - Classical MDS (metric multidimensional scaling from pairwise distances)
 - Sammon mapping (nonlinear metric MDS; fractional distance stress)
+- Sparse PCA (L1 soft-thresholded loadings; Zou/Hastie/Tibshirani-style)
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
 

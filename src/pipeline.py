@@ -20,6 +20,7 @@ from kernel_pca import KernelPCA
 from spectral_embedding import SpectralEmbedding
 from factor_analysis import FactorAnalysis
 from diffusion_maps import DiffusionMaps
+from sparse_pca import SparsePCA
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 
@@ -152,6 +153,14 @@ def run_pipeline(
     results["sammon"] = {
         "silhouette": round(silhouette_of_embedding(sammon_frame, labels), 4),
         "separation": round(cluster_separation(sammon_frame, labels), 4),
+        "variance": float("nan"),
+    }
+
+    spca_emb = SparsePCA(n_components=2, alpha=0.05, max_iter=50).fit_transform(df.to_numpy())
+    spca_frame = pd.DataFrame(spca_emb, columns=["SPC1", "SPC2"])
+    results["sparse_pca"] = {
+        "silhouette": round(silhouette_of_embedding(spca_frame, labels), 4),
+        "separation": round(cluster_separation(spca_frame, labels), 4),
         "variance": float("nan"),
     }
 
