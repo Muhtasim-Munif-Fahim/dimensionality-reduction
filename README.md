@@ -29,6 +29,26 @@ tests/              - Unit tests
 - Sparse PCA (L1 soft-thresholded loadings; Zou/Hastie/Tibshirani-style)
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
+- LTSA (Local Tangent Space Alignment; neighbourhood PCA + global align)
+
+
+## LTSA (Local Tangent Space Alignment)
+
+LLE preserves reconstruction weights; Isomap preserves geodesic distances.
+`LTSA` (Zhang & Zha, 2004) instead estimates a local tangent basis at each
+point via neighbourhood PCA and aligns those tangent coordinates into a
+global embedding. Classic LTSA is transductive (no out-of-sample
+`transform`).
+
+```python
+import numpy as np
+from ltsa import LTSA
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(100, 8))
+emb = LTSA(n_components=2, n_neighbors=10).fit_transform(X)
+print(emb.shape)  # (100, 2)
+```
 
 ## Pivot: TruncatedSVD instead of another PCA
 

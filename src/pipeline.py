@@ -14,6 +14,7 @@ from supervised_methods import lda_reduce, tsne_reduce
 from tsne import TSNE
 from isomap import Isomap
 from lle import LLE
+from ltsa import LTSA
 from mds import ClassicalMDS
 from sammon import Sammon
 from kernel_pca import KernelPCA
@@ -102,6 +103,16 @@ def run_pipeline(
         "separation": round(cluster_separation(lle_frame, labels), 4),
         "variance": float("nan"),
     }
+
+    ltsa_emb = LTSA(
+        n_components=2, n_neighbors=10
+    ).fit_transform(X)
+    ltsa_frame = pd.DataFrame(ltsa_emb, columns=["LTSA1", "LTSA2"])
+    results["ltsa"] = {
+        "silhouette": round(silhouette_of_embedding(ltsa_frame, labels), 4),
+        "separation": round(cluster_separation(ltsa_frame, labels), 4),
+    }
+
 
     se_emb = SpectralEmbedding(
         n_components=2,
