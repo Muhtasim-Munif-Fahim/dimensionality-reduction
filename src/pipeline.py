@@ -24,6 +24,7 @@ from diffusion_maps import DiffusionMaps
 from sparse_pca import SparsePCA
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
+from embedding_quality import embedding_quality
 
 
 def run_pipeline(
@@ -106,11 +107,12 @@ def run_pipeline(
 
     ltsa_emb = LTSA(
         n_components=2, n_neighbors=10
-    ).fit_transform(X)
+    ).fit_transform(df.to_numpy())
     ltsa_frame = pd.DataFrame(ltsa_emb, columns=["LTSA1", "LTSA2"])
     results["ltsa"] = {
         "silhouette": round(silhouette_of_embedding(ltsa_frame, labels), 4),
         "separation": round(cluster_separation(ltsa_frame, labels), 4),
+        "variance": float("nan"),
     }
 
 
@@ -193,6 +195,31 @@ def run_pipeline(
         "variance": float("nan"),
         "reconstruction_error": round(float(nmf_info["reconstruction_error"]), 6),
     }
+
+    # Unsupervised neighbourhood-rank quality of every 2-D embedding.
+    quality_k = min(10, max(1, (n_samples - 1) // 2 - 1))
+    embeddings = {
+        "pca_manual": pca_manual_emb,
+        "pca_svd": pca_svd_emb,
+        "lda": lda_emb,
+        "tsne": tsne_emb,
+        "tsne_classic": classic_emb,
+        "isomap": isomap_frame,
+        "lle": lle_frame,
+        "ltsa": ltsa_frame,
+        "spectral_embedding": se_frame,
+        "factor_analysis": fa_frame,
+        "diffusion_maps": dm_frame,
+        "classical_mds": mds_frame,
+        "sammon": sammon_frame,
+        "sparse_pca": spca_frame,
+        "nmf": nmf_emb,
+    }
+    for name, frame in embeddings.items():
+        quality = embedding_quality(df.to_numpy(), frame, n_neighbors=quality_k)
+        results[name]["trustworthiness"] = round(quality["trustworthiness"], 4)
+        results[name]["continuity"] = round(quality["continuity"], 4)
+        results[name]["rnx_auc"] = round(quality["rnx_auc"], 4)
 
     summary = {
         "n_samples": n_samples,

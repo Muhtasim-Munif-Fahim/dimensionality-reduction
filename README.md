@@ -30,6 +30,7 @@ tests/              - Unit tests
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
 - LTSA (Local Tangent Space Alignment; neighbourhood PCA + global align)
+- Embedding quality metrics: trustworthiness, continuity, co-ranking `Q_NX` / LCMC / `R_NX` AUC
 
 
 ## LTSA (Local Tangent Space Alignment)
@@ -228,6 +229,36 @@ print(restored.shape)  # (50, 12)
 - Reconstruction error
 - Silhouette score on reduced embeddings
 - Visual separation quality
+- Unsupervised neighbourhood-rank quality (`embedding_quality.py`). The
+  pipeline records trustworthiness, continuity and `R_NX` AUC for every
+  2-D embedding.
+
+## Embedding quality (trustworthiness, continuity, co-ranking)
+
+Silhouette needs labels, and reconstruction error only applies to linear
+maps. `src/embedding_quality.py` adds metrics for any embedding that only
+compare neighbour ranks in the input and the embedding:
+
+| Function | Measures | Perfect / random |
+| --- | --- | --- |
+| `trustworthiness(X, Y, k)` | Intrusions: embedding neighbours that were far in the input (Venna & Kaski, 2001) | 1 / ~0.5 |
+| `continuity(X, Y, k)` | Extrusions: input neighbours pushed away | 1 / ~0.5 |
+| `neighborhood_preservation(X, Y, k)` | `Q_NX(k)`, the mean overlap of the k-NN sets | 1 / `k/(n-1)` |
+| `lcmc(X, Y, k)` | `Q_NX(k) - k/(n-1)` (Chen & Buja, 2009) | `1 - k/(n-1)` / 0 |
+| `rnx_curve`, `rnx_auc` | Rescaled `R_NX(K)` for all K, and its area on a log-K axis (Lee et al., 2015) | 1 / 0 |
+| `coranking_matrix(X, Y)` | `Q[k-1, l-1]`: pairs ranked k-th in the input and l-th in the embedding (Lee & Verleysen, 2009) | diagonal |
+
+`trustworthiness` matches `sklearn.manifold.trustworthiness` exactly
+(Euclidean distances, stable index tie-breaking). `embedding_quality(X, Y, k)`
+returns all the scalars from one ranking pass.
+
+```python
+from embedding_quality import embedding_quality
+from isomap import Isomap
+
+Y = Isomap(n_components=2, n_neighbors=10).fit_transform(X)
+print(embedding_quality(X, Y, n_neighbors=10))
+```
 
 
 ## Classic t-SNE (NumPy)
