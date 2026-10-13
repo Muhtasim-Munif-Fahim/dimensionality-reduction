@@ -15,6 +15,7 @@ tests/              - Unit tests
 - PCA (manual implementation + scikit-learn)
 - SVD-based reduction
 - Truncated SVD for sparse TF-IDF matrices (no centering)
+- Random projections: Gaussian and (very) sparse Achlioptas / Li et al. maps with the Johnson-Lindenstrauss target dimension
 - FastICA for linear mixtures of independent sources
 - NMF (non-negative parts-based factors, multiplicative updates)
 - LDA (supervised)
@@ -49,6 +50,28 @@ rng = np.random.default_rng(0)
 X = rng.normal(size=(100, 8))
 emb = LTSA(n_components=2, n_neighbors=10).fit_transform(X)
 print(emb.shape)  # (100, 2)
+```
+
+## Random projections (Johnson-Lindenstrauss)
+
+`src/random_projection.py` adds data-independent linear maps. They need no fit beyond drawing a random matrix, so they are a cheap way to shrink very wide data before kNN, clustering, or a slower nonlinear method.
+
+- `johnson_lindenstrauss_min_dim(n_samples, eps)` returns the target dimension `k >= 4 ln(n) / (eps^2/2 - eps^3/3)` (Dasgupta & Gupta 2003). At that dimension every pairwise squared distance stays within `1 +/- eps` with high probability. It rounds up, which is the safe side (scikit-learn truncates, so it reports one less).
+- `GaussianRandomProjection` draws i.i.d. `N(0, 1/k)` entries.
+- `SparseRandomProjection` uses entries `+/- sqrt(1/(density k))` with probability `density/2` each. `density="auto"` is the very sparse `1/sqrt(d)` scheme of Li, Hastie & Church 2006; `density=1/3` is Achlioptas 2003. The matrix is CSR, sparse input stays sparse, and `dense_output=False` keeps the output sparse.
+- `n_components="auto"` picks the JL dimension for the number of training rows. It raises an error if that is wider than the input.
+- `inverse_transform` is the pseudo-inverse least-squares map back, and is exact on the projection's row space.
+- `distance_distortion(X, Y)` reports the empirical ratios of squared distances, so you can check the guarantee on your own data.
+
+```python
+import numpy as np
+from random_projection import SparseRandomProjection, distance_distortion, johnson_lindenstrauss_min_dim
+
+X = np.random.default_rng(0).normal(size=(40, 6000))
+print(johnson_lindenstrauss_min_dim(40, eps=0.3))      # 410
+rp = SparseRandomProjection(eps=0.3, random_state=0)
+Y = rp.fit_transform(X)                               # (40, 410)
+print(distance_distortion(X, Y)["max_abs_distortion"])  # < 0.3
 ```
 
 ## Pivot: TruncatedSVD instead of another PCA
