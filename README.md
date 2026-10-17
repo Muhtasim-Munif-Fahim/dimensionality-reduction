@@ -25,6 +25,7 @@ tests/              - Unit tests
 - LLE (Locally Linear Embedding; neighbourhood reconstruction)
 - Spectral Embedding / Laplacian Eigenmaps (kNN Laplacian eigenvectors)
 - Factor Analysis (EM / MLE latent factors with diagonal uniquenesses)
+- Probabilistic PCA (closed-form MLE density, Minka / BIC choice of dimension, EM fit and imputation with missing values)
 - Classical MDS (metric multidimensional scaling from pairwise distances)
 - Sammon mapping (nonlinear metric MDS; fractional distance stress)
 - Sparse PCA (L1 soft-thresholded loadings; Zou/Hastie/Tibshirani-style)
@@ -178,6 +179,33 @@ frame = factor_analysis_reduce(X, n_components=2)
 ```
 
 `factor_analysis_reduce` returns a pandas DataFrame with columns `FA1`, `FA2`, …
+
+## Probabilistic PCA (Tipping & Bishop)
+
+`ProbabilisticPCA` in `src/ppca.py` is the isotropic-noise case of Factor
+Analysis, `x = mean + W z + eps` with `eps ~ N(0, sigma2 I)`. It keeps PCA's
+axes but adds a proper Gaussian density `N(mean, W W.T + sigma2 I)`:
+
+- closed-form MLE: `sigma2` is the mean of the discarded covariance
+  eigenvalues and `W = U_q (L_q - sigma2 I)^(1/2)` (`ddof=1` reproduces
+  scikit-learn `PCA.score` / `get_covariance`);
+- `score_samples` / `score` give per-row log-likelihoods, and
+  `get_precision` uses the Woodbury identity;
+- `n_components="mle"` picks `q` by Minka's (2000) Laplace approximation to
+  the Bayesian evidence (same choice as `PCA(n_components="mle")`), and
+  `"bic"` by BIC. The per-`q` criterion is kept in `evidence_`;
+- with `NaN`s in `X`, `fit` runs exact EM over the observed entries (the
+  observed-data log-likelihood in `loglike_history_` never decreases), and
+  `impute` fills the gaps with `E[x_missing | x_observed]`.
+
+```python
+from ppca import ProbabilisticPCA, minka_mle_dimension, ppca_reduce
+
+model = ProbabilisticPCA(n_components="mle").fit(X)
+model.n_components_, model.noise_variance_, model.score(X_test)
+filled = ProbabilisticPCA(n_components=3).fit(X_with_nans).impute(X_with_nans)
+frame = ppca_reduce(X, n_components=2)   # columns PPCA1, PPCA2
+```
 
 ## FastICA
 
