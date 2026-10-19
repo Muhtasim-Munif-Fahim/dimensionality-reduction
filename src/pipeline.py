@@ -22,6 +22,7 @@ from spectral_embedding import SpectralEmbedding
 from factor_analysis import FactorAnalysis
 from diffusion_maps import DiffusionMaps
 from sparse_pca import SparsePCA
+from robust_pca import RobustPCA
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 from embedding_quality import embedding_quality
@@ -177,6 +178,16 @@ def run_pipeline(
         "variance": float("nan"),
     }
 
+    rpca = RobustPCA(n_components=2, max_iter=300)
+    rpca_frame = pd.DataFrame(rpca.fit_transform(df.to_numpy()), columns=["RPC1", "RPC2"])
+    results["robust_pca"] = {
+        "silhouette": round(silhouette_of_embedding(rpca_frame, labels), 4),
+        "separation": round(cluster_separation(rpca_frame, labels), 4),
+        "variance": round(float(rpca.explained_variance_ratio_.sum()), 4),
+        "low_rank": int(rpca.rank_),
+        "corruption_fraction": round(float(rpca.corruption_fraction_), 4),
+    }
+
     ae = NumpyAutoencoder(n_input=n_features, n_hidden=8, learning_rate=0.005)
     ae.fit(df.to_numpy(), epochs=50)
     results["autoencoder"] = {
@@ -213,6 +224,7 @@ def run_pipeline(
         "classical_mds": mds_frame,
         "sammon": sammon_frame,
         "sparse_pca": spca_frame,
+        "robust_pca": rpca_frame,
         "nmf": nmf_emb,
     }
     for name, frame in embeddings.items():

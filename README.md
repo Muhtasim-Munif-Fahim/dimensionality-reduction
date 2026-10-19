@@ -29,6 +29,7 @@ tests/              - Unit tests
 - Classical MDS (metric multidimensional scaling from pairwise distances)
 - Sammon mapping (nonlinear metric MDS; fractional distance stress)
 - Sparse PCA (L1 soft-thresholded loadings; Zou/Hastie/Tibshirani-style)
+- Robust PCA (Principal Component Pursuit low-rank + sparse split via inexact ALM; handles gross corruptions and missing entries)
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
 - LTSA (Local Tangent Space Alignment; neighbourhood PCA + global align)
@@ -179,6 +180,40 @@ frame = factor_analysis_reduce(X, n_components=2)
 ```
 
 `factor_analysis_reduce` returns a pandas DataFrame with columns `FA1`, `FA2`, …
+
+## Robust PCA (Principal Component Pursuit)
+
+PCA is a least-squares fit, so a few grossly corrupted entries can rotate
+every principal axis. Glitches, occlusions and typos are typical causes.
+`RobustPCA` in `src/robust_pca.py` splits the data as `X = L + S`, with `L`
+low rank and `S` sparse (Candès, Li, Ma & Wright 2011), by solving
+
+    min ||L||_* + lam ||S||_1   s.t.   P_obs(L + S) = P_obs(X)
+
+- The solver is the inexact augmented Lagrange multiplier method (Lin, Chen
+  & Ma 2010). Each step does singular-value thresholding for `L`,
+  soft-thresholding for `S`, and dual ascent with a growing penalty `mu`.
+  The default is `lam = 1/sqrt(max(n, d))`.
+- `NaN` entries are unobserved. The constraint only binds where `X` is
+  observed, so `L` completes the matrix and `S` is 0 there.
+- The principal axes are those of `L` centred on its own column means.
+  `rank_` is the recovered rank, and `outlier_scores_` holds the row norms
+  of `S`.
+- `fit_transform` returns the scores of the *cleaned* rows. `clean()`
+  returns `L`.
+- On incoherent low-rank data with 5% gross corruptions, both parts are
+  recovered to ~1e-7 relative error. With 8% large corruptions (the test
+  setting), scikit-learn's `PCA` axes tilt by more than 10°, while the
+  robust axes match the clean subspace.
+
+```python
+from robust_pca import RobustPCA, principal_component_pursuit, rpca_reduce
+
+L, S, info = principal_component_pursuit(X)        # works with NaNs
+model = RobustPCA(n_components=3).fit(X)
+model.rank_, model.corruption_fraction_, model.outlier_scores_
+frame = rpca_reduce(X, n_components=2)             # columns RPCA1, RPCA2
+```
 
 ## Probabilistic PCA (Tipping & Bishop)
 
