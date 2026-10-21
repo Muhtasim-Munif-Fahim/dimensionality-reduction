@@ -30,6 +30,7 @@ tests/              - Unit tests
 - Sammon mapping (nonlinear metric MDS; fractional distance stress)
 - Sparse PCA (L1 soft-thresholded loadings; Zou/Hastie/Tibshirani-style)
 - Robust PCA (Principal Component Pursuit low-rank + sparse split via inexact ALM; handles gross corruptions and missing entries)
+- Locality Preserving Projections and Neighborhood Preserving Embedding (linear, out-of-sample versions of Laplacian eigenmaps and LLE)
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
 - LTSA (Local Tangent Space Alignment; neighbourhood PCA + global align)
@@ -180,6 +181,28 @@ frame = factor_analysis_reduce(X, n_components=2)
 ```
 
 `factor_analysis_reduce` returns a pandas DataFrame with columns `FA1`, `FA2`, …
+
+## Linear graph embeddings: LPP and NPE
+
+Laplacian eigenmaps and LLE preserve local neighbourhoods but cannot embed new points. `src/lpp.py` adds their linearised versions. Each learns a projection matrix `A`, so new points map as `y = (x - mean) @ A`, just as with PCA.
+
+- **Locality Preserving Projections** (He & Niyogi, NIPS 2003) solve `X'LX a = λ X'DX a` for the smallest `λ`. Here `W` is a symmetric kNN affinity (heat kernel by default, or binary), `D` the degree matrix and `L = D - W`. Each eigenvalue is the normalised locality cost `Σ W_ij (y_i - y_j)² / 2 Σ D_ii y_i²` of its direction.
+- **Neighborhood Preserving Embedding** (He et al., ICCV 2005) solves `X'MX a = λ X'X a` with `M = (I - W)'(I - W)`. Here `W` holds the sum-to-one LLE reconstruction weights, the same ones the `lle` module computes.
+
+When `n_features > n_samples` the right-hand matrix is singular. Use `pca_components` for PCA pre-reduction (the "Laplacianfaces" recipe), or rely on the relative ridge `reg`.
+
+```python
+from lpp import LocalityPreservingProjections, NeighborhoodPreservingEmbedding
+
+lpp = LocalityPreservingProjections(n_components=2, n_neighbors=10, weight="heat").fit(X_train)
+Z_test = lpp.transform(X_test)           # out-of-sample
+lpp.eigenvalues_                          # ascending locality cost per component
+
+npe = NeighborhoodPreservingEmbedding(n_components=2, n_neighbors=12, pca_components=30)
+Z = npe.fit_transform(X_train)
+```
+
+The pipeline now reports silhouette, separation and embedding quality for both methods. The tests check the generalised eigen-equations and `D`-orthonormality. They also check that LPP's direction has a locality cost no larger than any of 200 random directions or the top PCA direction, that NPE's weights match `lle`'s, and that results are rotation-equivariant and stay consistent out of sample.
 
 ## Robust PCA (Principal Component Pursuit)
 

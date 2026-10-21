@@ -23,6 +23,7 @@ from factor_analysis import FactorAnalysis
 from diffusion_maps import DiffusionMaps
 from sparse_pca import SparsePCA
 from robust_pca import RobustPCA
+from lpp import LocalityPreservingProjections, NeighborhoodPreservingEmbedding
 from autoencoder import NumpyAutoencoder
 from evaluation import silhouette_of_embedding, cluster_separation, reconstruction_error
 from embedding_quality import embedding_quality
@@ -188,6 +189,22 @@ def run_pipeline(
         "corruption_fraction": round(float(rpca.corruption_fraction_), 4),
     }
 
+    lpp = LocalityPreservingProjections(n_components=2, n_neighbors=10)
+    lpp_frame = pd.DataFrame(lpp.fit_transform(df.to_numpy()), columns=["LPP1", "LPP2"])
+    results["lpp"] = {
+        "silhouette": round(silhouette_of_embedding(lpp_frame, labels), 4),
+        "separation": round(cluster_separation(lpp_frame, labels), 4),
+        "variance": float("nan"),
+    }
+
+    npe = NeighborhoodPreservingEmbedding(n_components=2, n_neighbors=10)
+    npe_frame = pd.DataFrame(npe.fit_transform(df.to_numpy()), columns=["NPE1", "NPE2"])
+    results["npe"] = {
+        "silhouette": round(silhouette_of_embedding(npe_frame, labels), 4),
+        "separation": round(cluster_separation(npe_frame, labels), 4),
+        "variance": float("nan"),
+    }
+
     ae = NumpyAutoencoder(n_input=n_features, n_hidden=8, learning_rate=0.005)
     ae.fit(df.to_numpy(), epochs=50)
     results["autoencoder"] = {
@@ -225,6 +242,8 @@ def run_pipeline(
         "sammon": sammon_frame,
         "sparse_pca": spca_frame,
         "robust_pca": rpca_frame,
+        "lpp": lpp_frame,
+        "npe": npe_frame,
         "nmf": nmf_emb,
     }
     for name, frame in embeddings.items():
