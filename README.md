@@ -31,6 +31,7 @@ tests/              - Unit tests
 - Sparse PCA (L1 soft-thresholded loadings; Zou/Hastie/Tibshirani-style)
 - Robust PCA (Principal Component Pursuit low-rank + sparse split via inexact ALM; handles gross corruptions and missing entries)
 - Locality Preserving Projections and Neighborhood Preserving Embedding (linear, out-of-sample versions of Laplacian eigenmaps and LLE)
+- Two-view methods: CCA (closed-form and regularised), PLS-SVD and PLS2/PLS1 regression
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
 - LTSA (Local Tangent Space Alignment; neighbourhood PCA + global align)
@@ -476,6 +477,30 @@ frame = sammon_reduce(X, n_components=2)
 
 `sammon_reduce` returns a pandas DataFrame with columns `SAM1`, `SAM2`, …
 
+
+## Two-view methods: CCA and PLS
+
+Every other method in this kit reduces a single table. `src/cca.py` handles paired views `X` (n×p) and `Y` (n×q) of the same samples.
+
+- **`CCA`** (Hotelling 1936) maximises `corr(Xa, Yb)` in closed form. It whitens each view and takes the SVD of `Cxx^{-1/2} Cxy Cyy^{-1/2}`. The singular values are the canonical correlations. `reg` adds a relative ridge (regularised CCA), which is needed when the number of features nears `n`. Also available: `transform`, held-out `score` (per-pair correlations) and structure coefficients `x_loadings_` / `y_loadings_`. `canonical_correlations(X, Y)` returns all of them.
+- **`PLSSVD`** finds unit-norm directions that maximise `cov(Xa, Yb)`, i.e. the singular vectors of `X'Y`.
+- **`PLSRegression`** is PLS2 (NIPALS regression mode), and PLS1 for a single response. At each step the weight vector is the exact dominant singular vector of the deflated `X'Y`. It exposes `coef_` / `intercept_` in the original units, `x_rotations_`, `x_scores_`, `predict` and R² `score`.
+
+```python
+from cca import CCA, PLSRegression
+
+cca = CCA(n_components=2).fit(X_train, Y_train)
+cca.correlations_                 # canonical correlations, descending
+cca.score(X_test, Y_test)         # held-out correlation of each pair
+pls = PLSRegression(n_components=3).fit(X_train, Y_train)
+Y_hat = pls.predict(X_test)
+```
+
+The tests check several properties:
+- The canonical variates are whitened within each view and their cross-covariance is diagonal.
+- The correlations match scikit-learn's iterative `CCA`, beat 300 random direction pairs, equal the multiple correlation when `Y` has one column, and are invariant under affine maps.
+- `PLSSVD` matches scikit-learn exactly up to sign.
+- `PLSRegression` matches scikit-learn's predictions (PLS1 to 1e-10) and reduces to OLS at full rank. Its scores are orthogonal, and R² does not decrease as components are added.
 
 ## Kernel PCA
 
