@@ -31,6 +31,7 @@ tests/              - Unit tests
 - Sparse PCA (L1 soft-thresholded loadings; Zou/Hastie/Tibshirani-style)
 - Robust PCA (Principal Component Pursuit low-rank + sparse split via inexact ALM; handles gross corruptions and missing entries)
 - Locality Preserving Projections and Neighborhood Preserving Embedding (linear, out-of-sample versions of Laplacian eigenmaps and LLE)
+- Sufficient dimension reduction: Sliced Inverse Regression (Li 1991, with sequential chi-square dimension test) and SAVE (Cook & Weisberg 1991) for supervised linear reduction of `X` given any response `y`
 - Two-view methods: CCA (closed-form and regularised), PLS-SVD and PLS2/PLS1 regression
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
@@ -501,6 +502,23 @@ The tests check several properties:
 - The correlations match scikit-learn's iterative `CCA`, beat 300 random direction pairs, equal the multiple correlation when `Y` has one column, and are invariant under affine maps.
 - `PLSSVD` matches scikit-learn exactly up to sign.
 - `PLSRegression` matches scikit-learn's predictions (PLS1 to 1e-10) and reduces to OLS at full rank. Its scores are orthogonal, and R² does not decrease as components are added.
+
+## Sufficient dimension reduction: SIR and SAVE
+
+`src/sir.py` finds the fewest directions `B` such that `y` depends on `X` only through `B'X`, without assuming a link function.
+
+- **`SlicedInverseRegression`** (Li 1991) slices `y` (equal-count slices, or one per class for categorical `y`), averages the standardised predictors in each slice and eigen-decomposes `Σ_h p_h m_h m_h'`. `dimension_test()` runs Li's sequential `n Σ_{j>d} λ_j ~ χ²((p−d)(H−d−1))` tests and `estimate_dimension(alpha)` returns the first `d` not rejected.
+- **`SAVE`** (Cook & Weisberg 1991) uses `Σ_h p_h (I − V_h)²` with within-slice covariances, so it also finds symmetric effects such as `y = x₁² + ε` that SIR cannot see.
+- Both expose `directions_` (unit-norm, in the original `X` scale), `eigenvalues_`, `explained_ratio_`, `transform`, and accept `reg` for near-singular covariance. `subspace_distance(A, B)` compares estimated and true subspaces.
+
+```python
+from sir import SlicedInverseRegression, SAVE
+
+sir = SlicedInverseRegression(n_components=2, n_slices=10).fit(X, y)
+sir.estimate_dimension()      # sequential chi-square test
+Z = sir.transform(X)          # sufficient predictors
+save = SAVE(n_components=1).fit(X, y)
+```
 
 ## Kernel PCA
 
