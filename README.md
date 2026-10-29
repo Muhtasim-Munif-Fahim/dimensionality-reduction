@@ -32,6 +32,7 @@ tests/              - Unit tests
 - Robust PCA (Principal Component Pursuit low-rank + sparse split via inexact ALM; handles gross corruptions and missing entries)
 - Locality Preserving Projections and Neighborhood Preserving Embedding (linear, out-of-sample versions of Laplacian eigenmaps and LLE)
 - Sufficient dimension reduction: Sliced Inverse Regression (Li 1991, with sequential chi-square dimension test) and SAVE (Cook & Weisberg 1991) for supervised linear reduction of `X` given any response `y`
+- Neighbourhood Components Analysis (Goldberger et al. 2005): supervised linear reduction and metric learning by maximising stochastic-nearest-neighbour leave-one-out accuracy, with kNN `predict`
 - Two-view methods: CCA (closed-form and regularised), PLS-SVD and PLS2/PLS1 regression
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
@@ -519,6 +520,35 @@ sir.estimate_dimension()      # sequential chi-square test
 Z = sir.transform(X)          # sufficient predictors
 save = SAVE(n_components=1).fit(X, y)
 ```
+
+## Neighbourhood Components Analysis
+
+`src/nca.py` learns a linear map `A` so that a soft nearest-neighbour classifier works well in the embedding `z = A x` (Goldberger, Roweis, Hinton & Salakhutdinov 2005).
+
+- Each point picks a neighbour with probability `p_ij ∝ exp(-‖z_i − z_j‖²)`. NCA maximises `f(A) = Σ_i Σ_{j: y_j = y_i} p_ij`, the expected number of correct leave-one-out classifications.
+- The gradient is computed in closed form (`O(n²(p + d))`) and optimised with L-BFGS. `nca_objective(A, X, y)` exposes the objective and gradient.
+- Unlike LDA it makes no Gaussian or shared-covariance assumption, and `n_components` may exceed `n_classes − 1`.
+- `A` is not orthogonal, so the learned scale sets the neighbourhood size.
+- Initialisation:
+  - `init="auto"` (LDA when `d < n_classes`, else PCA), plus `pca`, `lda`, `identity`, `random` or an explicit matrix.
+  - The objective is non-convex, and PCA starts can stall when the high-variance directions are pure noise.
+- Fitted attributes: `components_` (acting on the raw features), `mahalanobis_matrix_ = AᵀA`, `objective_history_` and `leave_one_out_accuracy()`.
+- Methods: `predict(X, n_neighbors)` runs a kNN vote in the embedding; `score` returns its accuracy.
+
+```python
+from nca import NeighbourhoodComponentsAnalysis
+
+nca = NeighbourhoodComponentsAnalysis(n_components=2).fit(X_train, y_train)
+Z = nca.transform(X_test)
+nca.score(X_test, y_test, n_neighbors=5)
+nca.mahalanobis_matrix_      # learned metric
+```
+
+The tests check several properties:
+- The gradient matches finite differences.
+- On data with two informative and six high-variance noise features, NCA reaches more than 95% 1-NN accuracy, while PCA stays below 70%.
+- The learned metric concentrates on the informative features.
+- The objective matches scikit-learn's `NeighborhoodComponentsAnalysis` from the same start.
 
 ## Kernel PCA
 
