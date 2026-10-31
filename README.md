@@ -568,3 +568,20 @@ print(emb.shape)  # (80, 2)
 ```
 
 `kernel_pca_reduce` returns a pandas DataFrame with columns `KPCA1`, `KPCA2`, …
+
+## Procrustes analysis (comparing and aligning embeddings)
+
+`src/procrustes.py` compares embeddings that only agree up to rotation/reflection, scale and translation, which is the usual case when you rerun PCA, MDS, Isomap or t-SNE.
+
+- `Procrustes(scaling=True, allow_reflection=True)` fits the similarity transform mapping a source configuration onto a target. It exposes `rotation_`, `scale_`, `translation_`, `rmsd_` and `disparity_`, and `transform` maps new source points.
+- `procrustes_disparity(A, B)` gives the standardized residual `m^2` in `[0, 1]`. It is the same number `scipy.spatial.procrustes` returns, and it is symmetric.
+- `protest(A, B, n_permutations=999)` runs Jackson's PROTEST permutation test on the Procrustes correlation `sqrt(1 - m^2)`.
+- `generalized_procrustes([X1, X2, ...])` performs Gower's GPA and aligns several embeddings to a common consensus.
+
+If one configuration has fewer columns, it is zero-padded, so a 2-D map can be compared with a 3-D one.
+
+```python
+from procrustes import Procrustes, protest
+model = Procrustes().fit(embedding_run_1, embedding_run_2)
+print(model.disparity_, protest(embedding_run_1, embedding_run_2).p_value)
+```
