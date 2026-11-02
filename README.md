@@ -23,6 +23,7 @@ tests/              - Unit tests
 - Classic t-SNE (exact NumPy, perplexity / learning-rate)
 - Isomap (geodesic kNN graph + classical MDS)
 - LLE (Locally Linear Embedding; neighbourhood reconstruction)
+- Hessian LLE / Hessian eigenmaps (Donoho & Grimes 2003; null space of the local tangent Hessian, works on non-convex parameter domains)
 - Spectral Embedding / Laplacian Eigenmaps (kNN Laplacian eigenvectors)
 - Factor Analysis (EM / MLE latent factors with diagonal uniquenesses)
 - Probabilistic PCA (closed-form MLE density, Minka / BIC choice of dimension, EM fit and imputation with missing values)
@@ -431,6 +432,32 @@ print(emb.shape)  # (120, 2)
 
 `n_neighbors` controls the local patches. `lle_reduce` returns a pandas
 DataFrame with columns `LLE1`, `LLE2`, …
+
+## Hessian LLE (Hessian eigenmaps)
+
+`HessianLLE` in `src/hessian_lle.py` (Donoho & Grimes, 2003) recovers the
+coordinates of a manifold that is locally isometric to an open, connected
+subset of R^d, for example a Swiss roll with a hole. Isomap would need that
+parameter domain to be convex. For each neighbourhood it fits local tangent
+coordinates `U` by SVD and orthonormalises `[1, U, U_a U_b]`. The quadratic
+block estimates the tangent Hessian, and these blocks are summed into an
+`n x n` form `H`. The embedding is the null space of `H` with the constant
+removed.
+
+```python
+from hessian_lle import HessianLLE, hessian_lle_reduce
+
+model = HessianLLE(n_components=2, n_neighbors=12)
+emb = model.fit_transform(X)  # (n, 2), emb.T @ emb / n == I
+print(model.reconstruction_error_)  # Hessian energy (~0 for a flat patch)
+frame = hessian_lle_reduce(X, n_components=2)  # DataFrame HLLE1, HLLE2
+```
+
+`n_neighbors` must exceed `d + d(d+1)/2` (5 for `d = 2`). All `d + 1` bottom
+eigenvectors are used and the constant is projected out, so the result does
+not depend on which basis the eigensolver returns for the degenerate null
+space. The method uses a dense `O(n^3)` eigensolve and is transductive, like
+LLE and LTSA.
 
 ## Classical MDS
 
