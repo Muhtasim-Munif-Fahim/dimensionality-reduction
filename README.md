@@ -28,6 +28,7 @@ tests/              - Unit tests
 - Factor Analysis (EM / MLE latent factors with diagonal uniquenesses)
 - Probabilistic PCA (closed-form MLE density, Minka / BIC choice of dimension, EM fit and imputation with missing values)
 - Classical MDS (metric multidimensional scaling from pairwise distances)
+- Landmark MDS (scalable classical MDS via landmark triangulation, with out-of-sample transform)
 - Sammon mapping (nonlinear metric MDS; fractional distance stress)
 - Sparse PCA (L1 soft-thresholded loadings; Zou/Hastie/Tibshirani-style)
 - Robust PCA (Principal Component Pursuit low-rank + sparse split via inexact ALM; handles gross corruptions and missing entries)
@@ -478,6 +479,25 @@ print(emb.shape)  # (80, 2)
 
 `mds_reduce` returns a pandas DataFrame with columns `MDS1`, `MDS2`, …
 
+
+
+## Landmark MDS
+
+`LandmarkMDS` in `src/landmark_mds.py` (de Silva & Tenenbaum, 2004) scales
+classical MDS to large `n`: it picks `m` landmarks (greedy farthest-point
+`"maxmin"` by default, or `"random"`), runs classical MDS on the `m x m`
+landmark distances, and places every point by distance-based triangulation.
+Cost is `O(n m)` distances plus an `O(m^3)` eigendecomposition, and
+`transform` embeds unseen points with the same formula.
+
+```python
+from landmark_mds import LandmarkMDS, landmark_mds_reduce
+
+model = LandmarkMDS(n_components=2, n_landmarks=50, random_state=0)
+emb = model.fit_transform(X)
+new_emb = model.transform(X_new)
+df = landmark_mds_reduce(X, n_components=2)  # columns LMDS1, LMDS2
+```
 
 ## Sammon Mapping
 
