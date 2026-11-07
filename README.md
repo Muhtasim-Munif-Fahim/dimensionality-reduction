@@ -28,6 +28,7 @@ tests/              - Unit tests
 - Factor Analysis (EM / MLE latent factors with diagonal uniquenesses)
 - Probabilistic PCA (closed-form MLE density, Minka / BIC choice of dimension, EM fit and imputation with missing values)
 - Classical MDS (metric multidimensional scaling from pairwise distances)
+- SMACOF (iterative metric MDS by majorisation / Guttman transform; Kruskal stress)
 - Landmark MDS (scalable classical MDS via landmark triangulation, with out-of-sample transform)
 - Sammon mapping (nonlinear metric MDS; fractional distance stress)
 - Sparse PCA (L1 soft-thresholded loadings; Zou/Hastie/Tibshirani-style)
@@ -41,6 +42,24 @@ tests/              - Unit tests
 - LTSA (Local Tangent Space Alignment; neighbourhood PCA + global align)
 - Embedding quality metrics: trustworthiness, continuity, co-ranking `Q_NX` / LCMC / `R_NX` AUC
 
+
+## SMACOF (iterative metric MDS)
+
+Classical MDS is closed-form and exact for Euclidean distances.
+`SMACOF` (de Leeuw 1977) iteratively minimises Kruskal raw stress
+`sum (d_ij - ||y_i - y_j||)^2` with the Guttman transform, so it still
+works when distances are noisy or the target dimension is too small.
+Initialisation defaults to classical MDS.
+
+```python
+import numpy as np
+from smacof import SMACOF
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(40, 6))
+emb = SMACOF(n_components=2, max_iter=100).fit_transform(X)
+print(emb.shape, SMACOF(n_components=2).fit(X).stress_)
+```
 
 ## LTSA (Local Tangent Space Alignment)
 
