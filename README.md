@@ -35,6 +35,7 @@ tests/              - Unit tests
 - Robust PCA (Principal Component Pursuit low-rank + sparse split via inexact ALM; handles gross corruptions and missing entries)
 - Locality Preserving Projections and Neighborhood Preserving Embedding (linear, out-of-sample versions of Laplacian eigenmaps and LLE)
 - Sufficient dimension reduction: Sliced Inverse Regression (Li 1991, with sequential chi-square dimension test) and SAVE (Cook & Weisberg 1991) for supervised linear reduction of `X` given any response `y`
+- Local Fisher Discriminant Analysis (Sugiyama 2007): supervised linear reduction that keeps multimodal classes' sub-clusters apart, with up to `n_features` components
 - Neighbourhood Components Analysis (Goldberger et al. 2005): supervised linear reduction and metric learning by maximising stochastic-nearest-neighbour leave-one-out accuracy, with kNN `predict`
 - Two-view methods: CCA (closed-form and regularised), PLS-SVD and PLS2/PLS1 regression
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
@@ -227,6 +228,20 @@ Z = npe.fit_transform(X_train)
 ```
 
 The pipeline now reports silhouette, separation and embedding quality for both methods. The tests check the generalised eigen-equations and `D`-orthonormality. They also check that LPP's direction has a locality cost no larger than any of 200 random directions or the top PCA direction, that NPE's weights match `lle`'s, and that results are rotation-equivariant and stay consistent out of sample.
+
+## Local Fisher Discriminant Analysis (LFDA)
+
+Fisher LDA treats each class as one Gaussian blob and gives at most `n_classes - 1` axes. When a class is multimodal, LDA squeezes its modes together. `src/lfda.py` implements LFDA (Sugiyama, JMLR 2007), which weights each sample pair by a local-scaling affinity `A_ij = exp(-||x_i - x_j||² / (σ_i σ_j))`. Here `σ_i` is the distance to the `k`-th same-class neighbour. Only nearby same-class pairs are pulled together, and the method solves `S_b φ = λ S_w φ` on those local scatters.
+
+```python
+from lfda import LocalFisherDiscriminantAnalysis, lfda_reduce
+
+lfda = LocalFisherDiscriminantAnalysis(n_components=2, n_neighbors=7).fit(X_train, y_train)
+Z_test = lfda.transform(X_test)   # out-of-sample linear map
+lfda.eigenvalues_                 # local Fisher ratios, descending
+```
+
+`embedding="weighted"` (the default) scales the axes by `sqrt(λ)`. You can also pass `"orthonormalized"` or `"plain"`. `affinity="none"` sets every `A_ij = 1`, which reduces LFDA exactly to classical LDA; the tests check this against scikit-learn's LDA subspace. On a two-class problem where one class has two far-apart modes, LDA's single axis merges the modes (gap ≈ 0.01 sd). LFDA keeps them apart (gap ≈ 4.5 sd) and still separates the classes.
 
 ## Robust PCA (Principal Component Pursuit)
 
