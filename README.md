@@ -41,8 +41,35 @@ tests/              - Unit tests
 - Kernel PCA (RBF / linear / polynomial Gram + eigendecomposition)
 - Autoencoder (numpy from scratch)
 - LTSA (Local Tangent Space Alignment; neighbourhood PCA + global align)
+- PHATE (Moon et al. 2019): alpha-decay kernel diffusion potentials + MDS, with von Neumann entropy choice of diffusion time, for trajectory / branching data
 - Embedding quality metrics: trustworthiness, continuity, co-ranking `Q_NX` / LCMC / `R_NX` AUC
 
+
+
+## PHATE (diffusion potentials + MDS)
+
+`PHATE` in `src/phate.py` follows Moon et al. (2019). It builds an
+alpha-decaying kernel with a per-point kNN bandwidth, turns it into a
+row-stochastic diffusion operator `P`, powers it to `P^t`, applies the
+log-potential `-log(P^t)` (or the `gamma` family: `0` = square root,
+`-1` = raw probabilities), and embeds the Euclidean distances between
+potential rows with classical MDS followed by SMACOF metric MDS.
+`t="auto"` picks the knee of the von Neumann entropy of `P^t`.
+Dense and exact (fine for a few thousand points); transductive.
+
+```python
+import numpy as np
+from phate import PHATE, phate_reduce
+
+X = np.random.default_rng(0).normal(size=(120, 10))
+model = PHATE(n_components=2, knn=5, decay=40, t="auto", random_state=0)
+emb = model.fit_transform(X)
+print(emb.shape, model.optimal_t_)
+frame = phate_reduce(X, knn=5, t=10)   # columns PHATE1, PHATE2
+```
+
+Helpers `alpha_decay_kernel`, `von_neumann_entropy` and `find_knee` are
+exported for inspecting the kernel and the diffusion-time choice.
 
 ## SMACOF (iterative metric MDS)
 
